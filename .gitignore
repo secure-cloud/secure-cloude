@@ -1,0 +1,4 @@
+#ignore all books
+public/books/
+#ignor PHPStorm files
+.idea/
