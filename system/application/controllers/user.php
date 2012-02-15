@@ -124,32 +124,6 @@ class UserController extends \Abstracts\Controller{
 		}
 	}
 
-	public function show_contacts_action() {
-		try {
-			if (!isset($this->post->id) ||
-				!is_numeric($this->post->id))
-				throw new Exception('Id is not specified or invalid');
-			if (isset($this->post->page) &&
-				!is_numeric($this->post->page))
-				throw new Exeption('Page parameter is invalid');
-			if (isset($this->post->count) &&
-				!is_numeric($this->post->count))
-				throw new Exeption('Count parameter is invalid');
-			$from = NULL;
-			$limit = NULL;
-			if (isset($this->post->page)) {
-				if (isset($this->post->count)) {
-					$from = $this->post->page;
-					$limit = $this->post->count;
-				}
-			}
-			$result = $this->model->user->get_contacts($this->post->id, $from, $limit);
-			$this->view->render('', $result);
-		} catch (Exception $e) {
-			$this->view->render('', array('error'=>$e->getMessage()));
-		}
-	}
-
 	public function _pre_action() {
 		try {
 			if (!isset($this->post->partner_id) ||

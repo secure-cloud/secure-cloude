@@ -43,5 +43,12 @@
 				'address'=>'localhost',
 				'port'=>'11211'
 			)
+		),
+		'filetransfer'=>array(
+			'localtmp'=>DIR_ROOT.'tmp/filetransfer/',
+			'serverpath'=>'/var/secure-cloud/',
+			'webserver'=>'localhost'
+
 		)
+
 	);

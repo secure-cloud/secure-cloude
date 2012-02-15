@@ -3,6 +3,7 @@
 	error_reporting(E_ALL);
 	ini_set('display_errors', 1);
 	define('DIR_ROOT', dirname(__FILE__).'/../');
+	define('SERVER_PATH_SEPARATOR', '/');
 	//все ошибки переделываем под исключения для более удобного отлова
 	function error_handler($errno, $errstr, $errfile, $errline) {
 		throw new Exception($errno.' '.$errstr.' in '.$errfile.' at '.$errline);
