@@ -11,9 +11,46 @@
 	* )
 	*/
 	return array(
-		'Registration'=>array(
-			'regexp' => 'user/registration',
-			'path' => 'user/registration',
+		'UserRegistration' => array(
+			'regexp' => 'api/user/registration',
+			'run' => 'user/registration',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'UserAuth' => array(
+			'regexp' => 'api/user/auth',
+			'run' => 'user/auth',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'UserInfo' => array(
+			'regexp' => 'api/user/info',
+			'run' => 'user/info',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'UserEdit' => array(
+			'regexp' => 'api/user/edit',
+			'run' => 'user/edit',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'ContactAdd' => array(
+			'regexp' => 'api/user/contacts/add',
+			'run' => 'user/add_contact',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'RestorePassword' => array(
+			'regexp' => 'api/user/restore/password',
+			'run' => 'user/restore_password',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'DeleteUser' => array(
+			'regexp' => 'api/user/delete',
+			'run' => 'user/delete',
+			'layout' => false,
 			'view' => 'json'
 		)
 	);

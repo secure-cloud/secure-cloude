@@ -164,7 +164,7 @@ class UserModel implements IModel{
 	public function save_user(){
 		$currentUserDB = new \DB\MySQL('users');
 		$update=array();
-		if($this->editableUser['id']){
+		if(isset($this->editableUser['id'])){
 			foreach($this->editableUser as $rowName => $value){
 				if ($rowName!='id'){
 					$update[$rowName]=$value;
@@ -173,10 +173,10 @@ class UserModel implements IModel{
 			return $currentUserDB->update($update)->exec();
 		}
 		else{
-			foreach($this->editableUser as $rowName => $value){
+			foreach($this->editableUser as $rowName => $value)
 				$update[$rowName]=$value;
 				return $currentUserDB->insert($update)->exec();
-			}
+
 		}
 		return NULL;
 	}
@@ -199,6 +199,11 @@ class UserModel implements IModel{
 			return $this;
 		}
 		return NULL;
+	}
+
+	public function delete_by($rowName,$value){
+		$currentUserDB = new \DB\MySQL('users');
+		return $currentUserDB->delete()->where($rowName.'=?',$value)->exec();
 	}
 
 	function new_inst(){

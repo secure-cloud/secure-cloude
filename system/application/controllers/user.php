@@ -14,11 +14,10 @@ class UserController extends \Abstracts\Controller{
 				throw new Exception('Password is missing');
 			if (!isset($this->post->passphrase))
 				throw new Exception('Passphrase is missing or incorrect');
-			$fields = array('mail', 'password', 'passphrase');
+			$fields = array('mail', 'password');
 			$values = array(
 				$this->post->mail,
 				$this->helper->string->salted_hash($this->post->password),
-				$this->post->passphrase
 			);
 
 			$this->model->user->set_user_param($fields, $values);
@@ -31,11 +30,25 @@ class UserController extends \Abstracts\Controller{
 			$sendMail->from("noreply@secure-cloud.com")
 					 ->to($this->post->mail)
 					 ->subject("Регистрация на secure cloud")
-					 ->message("Thanks for registration. Your passphrase is".$this->post->passphrase)
+					 ->message("Thanks for registration. Your passphrase is: ".$this->post->passphrase)
 					 ->send();
 			$this->view->json()->render('', array('status'=>'ok'));
 
 		} catch (Exception $e) {
+			$this->view->json()->render('', array('error'=>$e->getMessage()));
+		}
+	}
+
+	public function delete_action(){
+		try{
+			if (!isset($this->post->mail) ||
+				!$this->helper->validator->email($this->post->mail))
+				throw new Exception('Mail is missing or incorrect');
+			if(!$this->model->user->delete_by('mail', $this->post->mail))
+				throw new Exception("Can't delete user");
+			$this->view->json()->render('', array('status'=>'ok'));
+		}
+		catch(Exception $e){
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
 	}
@@ -126,15 +139,12 @@ class UserController extends \Abstracts\Controller{
 
 	public function _pre_action() {
 		try {
-			if (!isset($this->post->partner_id) ||
-				!is_numeric($this->post->partner_id))
-				throw new Exception('Partner id is missing or invalid');
-			if (!isset($this->post->check_sum))
-				throw new Exception('Checksum is missing');
-			$checkresult = $this->helper->api->check_sum(
-				(array)$this->post,
-				$this->post->partner_id
-			);
+//			if (!isset($this->post->check_sum)) //ToDo РАскомментировать. Установлено только на время тестирования системы
+//				throw new Exception('Checksum is missing');
+//			$checkresult = $this->helper->api->check_sum(
+//				(array)$this->post
+//			);
+			$checkresult = true; //ToDo убрать строчку. Установлена только на время тестирования системы
 			if ($checkresult === false)
 				throw new Exception('Checksum is corrupted');
 		} catch (Exception $e) {

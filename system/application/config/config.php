@@ -7,8 +7,8 @@
 		'db'=>array(
 			'host'=>'localhost',
 			'user'=>'root',
-			'password'=>'root',
-			'database'=>'vknige'
+			'password'=>'',
+			'database'=>'secure-cloud'
 		),
 		'js'=>array(
 			'default'=>array(

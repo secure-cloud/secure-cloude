@@ -2,3 +2,4 @@
 public/books/
 #ignor PHPStorm files
 .idea/
+.htaccess

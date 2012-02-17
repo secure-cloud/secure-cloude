@@ -89,7 +89,7 @@ class SendMail{
 	 * @param bool $html
 	 * @return bool
 	 */
-	public function send($tpl="mail", $layout = NULL, $html=true){
+	public function send($tpl="mail/mail", $layout = NULL, $html=true){
 		if($html){
 			$this->prepare_message($tpl);
 		}
