@@ -85,10 +85,30 @@ class FileModel implements IModel{
 		return NULL;
 
 	}
+
+	public function set_into_catalog($userId, $userPath){
+		$path = $this->make_sever_path($userId, $userPath);
+		if(substr($path, -1)=='\\' || substr($path, -1)=='/'){ //Если true, то счситаем, что работаем с каталогом
+			preg_match('(.*\\)(w+\\)$', $path, $matches);
+			$redis = new \Cache\Redis;
+			$redis->sadd($matches[2],$matches[1]);
+			return $this;
+		}else{
+			preg_match('(.*\\)(w+\.?w*)$', $path, $matches);
+			$redis = new \Cache\Redis;
+			$redis->sadd($matches[2],$matches[1]);
+			return $this;
+		}
+	}
+
+	public function get_catalog($userId, $userPath){
+		//ToDo добавить в каталог
+
+	}
 	private function delete($userId, $userPath){
 		try{
 			$serverPath = \System\Config::instance()->filetransfer['serverpath'].$this->make_sever_path($userId,$userPath);
-			$this->get_by('path', $serverPath);
+			$this->get_by('fullname', $serverPath);
 			$servers[] = $this->fileData['server'];
 			$servers = array_merge($servers, array_shift(explode(',', $this->fileData['bu_server'])));
 			while(!empty($servers)){
@@ -112,7 +132,7 @@ class FileModel implements IModel{
 	public function load_file($userId, $userPath){
 		try{
 			$serverPath = \System\Config::instance()->filetransfer['serverpath'].$this->make_sever_path($userId,$userPath);
-			$this->get_by('path', $serverPath);
+			$this->get_by('fullname', $serverPath);
 			$ftp = ftp_ssl_connect($this->fileData['server']);
 				if(!$ftp)
 					throw new Exception("Could not connect to web-server while loading file.");
@@ -133,13 +153,21 @@ class FileModel implements IModel{
 			}
 			if($this->post_file($localPath)!==true)
 				throw new Exception("Coudn't get file from server.");
+			unlink($localPath);
 			return true;
 		}
 		catch(Exception $e){
+			unlink($localPath);
 			return $e->getMessage();
 		}
 
 	}
+	/**
+	 * Отправляет сохраненный локально файл указанному в конфиге серверу
+	 * @param $filePath
+	 * @return bool|Exception
+	 * @throws Exception
+	 */
 	private function post_file($filePath){
 		try{
 			$host=\System\Config::instance()->filetransfer['fileposturl'];
@@ -248,7 +276,15 @@ class FileModel implements IModel{
 				$bu_servers[] = $server;
 				$serverExeption[] = $server;
 			}
+			preg_match('|(.*)/(w+).(w+)|',$RemoteFilePath,$matches); //ToDo: переписать РегЭксп на выборку пути, расширения и имени файла
+			$this->fileData['name']= $matches[2];
+			$this->fileData['ext']= $matches[3];
+			$this->fileData['path']= $matches[1].'/';
+			$this->fileData['fullname']= $matches[0];
 			$this->fileData['bu_server']=join(',', $bu_servers);
+			$this->fileData['hash'] = md5_file($localFilePath);
+
+
 			$this->save_params();
 			return true;
 
