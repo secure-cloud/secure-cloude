@@ -51,9 +51,9 @@ class Redis implements \ICache{
 			fwrite($redis,$command);
 			$this->result = $this->_read_reply();
 			fclose($redis);
-			$this->disconnect();
-			unset($this->cmdlist);
-			unset($this->argsCounter);
+			$this->connection=null;
+			$this->cmdlist = array();
+			$this->argsCounter = 0;
 			$this->multi=false;
 			return $this->result;
 
@@ -61,10 +61,6 @@ class Redis implements \ICache{
 		catch(\Exception $e){
 			return $e;
 		}
-	}
-	private function disconnect(){
-		fclose($this->connection);
-		$this->connection=NULL;
 	}
 	private function multi(){
 		$this->multi=true;
@@ -160,7 +156,6 @@ class Redis implements \ICache{
 				$this->reportError('Non-protocol answer: '.print_r($server_reply, 1));
 				return false;
 		}
-		$server_reply = fgets($this->connection);
 		return $response;
 	}
 
