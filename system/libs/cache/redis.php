@@ -36,7 +36,7 @@ class Redis implements \ICache{
 				$cmd.=join(' ',$value);
 			}
 			else{
-				$cmd.= ' '.$vars.' ';
+				$cmd.= ' '.$value.' ';
 			}
 		}
 		$this->cmdlist[] = $cmd;
@@ -184,5 +184,16 @@ class Redis implements \ICache{
 		$this->cmdlist[]="set ".$id." ".$data; //Todo: Добавить проверку, на случай, если параметр -- строка с пробелами
 		return $this->exec();
 	}
+	public function tsend(){
+		$redis = $this->connect($this->host,$this->port);
+		$result = fwrite($redis,"*3\n\r$3\r\nSET\r\n$5\r\nmykey\r\n$8\r\nmyvalue");
+		if(!$result){
+			return false;
+		}
+		$result=$this->_read_reply();
+		return $result;
+
+	}
+
 }
 ?>
