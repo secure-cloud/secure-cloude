@@ -14,6 +14,7 @@ class Redis implements \ICache{
 	private $multi = false;
 	private $result = NULL;
 	private $connection = NULL;
+	private $argsCounter = 0;
 
 	/**
 	 *
@@ -27,34 +28,33 @@ class Redis implements \ICache{
 	}
 
 	public function __call($name,$vars){
-		$cmd = $name." ";
-		foreach($vars as $key => $value){
-			if(is_string($value) && (preg_match('/\s/',$value)==1)){
-				$cmd.=' "'.$value.'" ';
-			}
-			elseif(is_array($value)){
-				$cmd.=join(' ',$value);
-			}
-			else{
-				$cmd.= ' '.$value.' ';
-			}
+		$this->argsCounter += 1+count($vars);
+		$command="$".strlen($name)."\r\n".$name."\r\n";
+		foreach($vars as $value){
+			$command.="$".strlen($value)."\r\n".$value."\r\n";
 		}
-		$this->cmdlist[] = $cmd;
+		array_push($this->cmdlist,$command);
 		return $this;
-
 	}
 	public function exec(){
 		try{
-			if($this->multi){
-				array_unshift($this->cmdlist,"MULTI");
-				array_push($this->cmdlist,"EXEC");
-			}
 			$redis=$this->connect($this->host,$this->port);
+			if($this->multi){
+				$this->argsCounter += 2;
+				array_unshift($this->cmdlist,"$5\r\nmulti\r\n");
+				array_push($this->cmdlist,"$4\r\nexec\r\n");
+			}
 			if(!$redis)
 				throw new \Exception("Can't connect to Redis");
-			fwrite($redis,array_shift($this->cmdlist));
+			$command = "*".$this->argsCounter."\r\n";
+			$command .= join('',$this->cmdlist);
+			fwrite($redis,$command);
 			$this->result = $this->_read_reply();
 			fclose($redis);
+			$this->disconnect();
+			unset($this->cmdlist);
+			unset($this->argsCounter);
+			$this->multi=false;
 			return $this->result;
 
 		}
@@ -62,7 +62,10 @@ class Redis implements \ICache{
 			return $e;
 		}
 	}
-
+	private function disconnect(){
+		fclose($this->connection);
+		$this->connection=NULL;
+	}
 	private function multi(){
 		$this->multi=true;
 		return $this;
@@ -106,11 +109,6 @@ class Redis implements \ICache{
 		$reply = trim($server_reply);
 		$response = null;
 
-		/**
-		 * Thanks to Justin Poliey for original code of parsing the answer
-		 * https://github.com/jdp
-		 * Error was fixed there: https://github.com/jamm/redisent
-		 */
 		switch ($reply[0])
 		{
 /* Error reply */
@@ -162,7 +160,7 @@ class Redis implements \ICache{
 				$this->reportError('Non-protocol answer: '.print_r($server_reply, 1));
 				return false;
 		}
-
+		$server_reply = fgets($this->connection);
 		return $response;
 	}
 
@@ -186,7 +184,7 @@ class Redis implements \ICache{
 	}
 	public function tsend(){
 		$redis = $this->connect($this->host,$this->port);
-		$result = fwrite($redis,"*3\n\r$3\r\nSET\r\n$5\r\nmykey\r\n$8\r\nmyvalue");
+		$result = fwrite($redis,"*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$7\r\nmyvalue\r\n");
 		if(!$result){
 			return false;
 		}

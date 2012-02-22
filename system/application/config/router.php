@@ -52,5 +52,11 @@
 			'run' => 'user/delete',
 			'layout' => false,
 			'view' => 'json'
+		),
+		'Test' => array(
+			'regexp' => 'test/test',
+			'run' => 'test/test',
+			'layout' => false,
+			'view' => 'json'
 		)
 	);

@@ -95,7 +95,7 @@ class UserController extends \Abstracts\Controller{
 
 			if ($this->model->user->password != $this->helper->string->salted_hash($this->post->password))
 				throw new Exception('Password is wrong');
-			$this->view->json()->render('', array('status'=>'ok'));
+			$this->view->json()->render('', array('status'=>'ok','id'=>$this->model->user->id));
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
