@@ -58,5 +58,11 @@
 			'run' => 'test/test',
 			'layout' => false,
 			'view' => 'json'
+		),
+		'GetDirContent' => array(
+			'regexp' => 'dir/content',
+			'run' => 'directory/getcontent',
+			'layout' => false,
+			'view' => 'json'
 		)
 	);

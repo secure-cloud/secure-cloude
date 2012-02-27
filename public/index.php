@@ -84,4 +84,5 @@
 			echo 'Ooops: '.$e;
 		}
 		\System\Profile::instance()->system_finish = microtime(true);
+
 	}

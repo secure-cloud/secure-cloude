@@ -11,11 +11,11 @@ class FileModel implements IModel{
 	public function get_by($paramType, $paramValue){
 		$this->fileData=array();
 		$fileDB = new \DB\MySQL('files');
-		$lib = $fileDB->select()
+		$file = $fileDB->select()
 			->where($paramType.' = ?', $paramValue)
 			->first();
-		if($lib){
-			foreach($lib as $rowName => $value){
+		if($file){
+			foreach($file as $rowName => $value){
 				$this->fileData[$rowName] = $value;
 			}
 			return $this;
@@ -85,9 +85,11 @@ class FileModel implements IModel{
 		return NULL;
 
 	}
-
+	/*
+	 * Функция сохраняет файл или папку в redis для последующей работы с каталогами
+	 */
 	public function set_into_catalog($userId, $userPath){
-		$path = $this->make_sever_path($userId, $userPath);
+		$path = DirectoryModel::make_server_path($userId, $userPath);
 		if(substr($path, -1)=='\\' || substr($path, -1)=='/'){ //Если true, то счситаем, что работаем с каталогом
 			preg_match('(.*\\)(w+\\)$', $path, $matches);
 			$redis = new \Cache\Redis;
@@ -100,14 +102,19 @@ class FileModel implements IModel{
 			return $this;
 		}
 	}
-
+	/*
+	 * Функция извлекает из Redis содержимое указанного каталога.
+	 */
 	public function get_catalog($userId, $userPath){
 		//ToDo добавить в каталог
 
 	}
+	/*
+	 * Функция удаляет файл
+	 */
 	private function delete($userId, $userPath){
 		try{
-			$serverPath = \System\Config::instance()->filetransfer['serverpath'].$this->make_sever_path($userId,$userPath);
+			$serverPath = \System\Config::instance()->filetransfer['serverpath'].DirectoryModel::make_server_path($userId,$userPath);
 			$this->get_by('fullname', $serverPath);
 			$servers[] = $this->fileData['server'];
 			$servers = array_merge($servers, array_shift(explode(',', $this->fileData['bu_server'])));
@@ -123,15 +130,13 @@ class FileModel implements IModel{
 			return $e;
 		}
 	}
-	private function make_sever_path($userId, $userPath){
-		if(preg_match('|(\w):(.*)|', $userPath, $matches)!=1)
-			throw new Exception('Wrong file path');
-		return $userId.'/'.$matches[1].'/'.str_replace('\\',SERVER_PATH_SEPARATOR,$matches[2]);
-	}
 
+	/*
+	 * Загрузить файл на сервер.
+	 */
 	public function load_file($userId, $userPath){
 		try{
-			$serverPath = \System\Config::instance()->filetransfer['serverpath'].$this->make_sever_path($userId,$userPath);
+			$serverPath = \System\Config::instance()->filetransfer['serverpath'].DirectoryModel::make_server_path($userId,$userPath);
 			$this->get_by('fullname', $serverPath);
 			$ftp = ftp_ssl_connect($this->fileData['server']);
 				if(!$ftp)
@@ -228,59 +233,42 @@ class FileModel implements IModel{
 	 * @return bool|string
 	 * @throws Exception
 	 */
-	public function save_file($userId,$userPath, $localFilePath, $bu_serverCount = 2){
-		$ftp = false;
-		$server = '';
-		$serverExeption = array();
-		$bu_servers = array();
-		\System\Config::instance()->init(dirname(__FILE__).'/../system/application/config/config.php');
-		$RemoteFilePath = \System\Config::instance()->filetransfer['serverpath'].$this->make_sever_path($userId,$userPath);
+	public function save_file($userId,$userPath, $filename, $localFilePath, $bu_serverCount = 2){
 
+		$servers = \ServerModel::get_servers($bu_serverCount+1);
+		$bu_servers = array();
 		try{
 			//Сохраняем файл на первичный сервер
-			while(!$ftp){
-				$timeOut = time();
-				$server = $this->get_server($serverExeption);
-				if(!$server){
-					throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
-				}
-				$ftp = ftp_ssl_connect($server);
-				if($timeOut > (time()+5))
-					throw new Exception('Internal error: Service connection timeout');
+			$server = array_shift($servers);
+			if(!$server){
+				throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
 			}
-
-			$result = ftp_put($ftp, $RemoteFilePath, $localFilePath, FTP_BINARY);
+			$ftp = ftp_ssl_connect($server->ip);
+			$serverFilePath = \DirectoryModel::make_server_path($userId,$userPath,$server);
+			$result = ftp_put($ftp, $serverFilePath, $localFilePath, FTP_BINARY);
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
 			}
-			$this->fileData['server'] = $server;
-			$serverExeption[] = $server;
+			$this->fileData['server'] = $server->id;
 
 			//Сохраняем в БэкАп сервера
 			for($i = 0; $i < $bu_serverCount; $i++){
-				while(!$ftp){
-					$timeOut = time();
-					$server = $this->get_server($serverExeption);
+					$server = array_shift($servers);
 					if(!$server){
 						throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
 					}
 					$ftp = ftp_ssl_connect($server);
-					if($timeOut > (time()+5))
-						throw new Exception('Internal error: Can not connetct to service');
-				}
-
-				$result = ftp_put($ftp, $RemoteFilePath, $localFilePath, FTP_BINARY);
+				$result = ftp_put($ftp, $serverFilePath, $localFilePath, FTP_BINARY);
 				if(!$result){
 					throw new Exception('Internal error: Can not save file to server '.$server);
 				}
-				$bu_servers[] = $server;
-				$serverExeption[] = $server;
+
+				$bu_servers[] = $server->id;
 			}
-			preg_match('|(.*)/(w+).(w+)|',$RemoteFilePath,$matches); //ToDo: переписать РегЭксп на выборку пути, расширения и имени файла
-			$this->fileData['name']= $matches[2];
-			$this->fileData['ext']= $matches[3];
-			$this->fileData['path']= $matches[1].'/';
-			$this->fileData['fullname']= $matches[0];
+			preg_match('|[w+\.]\.(w+)$|',$filename,$matches); //ToDo: переписать РегЭксп на выборку пути, расширения и имени файла
+			$this->fileData['name']= $filename;
+			$this->fileData['ext']= $matches[1];
+			$this->fileData['path']= $userPath;
 			$this->fileData['bu_server']=join(',', $bu_servers);
 			$this->fileData['hash'] = md5_file($localFilePath);
 
@@ -295,16 +283,6 @@ class FileModel implements IModel{
 			return $e->getMessage();
 		}
 
-	}
-	/**
-	 * Функция возвращает ip случайного сервера. Принимает массив ip серверов, которые не должны участвовать в выборке.
-	 *
-	 * @param array $exept
-	 * @return array
-	 */
-	private function get_server($exept = array()){
-		$serversDB = new \DB\MySQL('servers');
-		return $serversDB->select('ip')->where('ip NOT IN ? ORDER BY RAND() LIMIT(1)', join(',', $exept))->first();
 	}
 
 	function new_inst(){

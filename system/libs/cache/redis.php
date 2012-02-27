@@ -164,17 +164,32 @@ class Redis implements \ICache{
 		trigger_error($msg, E_USER_WARNING);
 	}
 
-	public function add($data){
-		$this->cmdlist[]="set ".$data; //Todo: Добавить проверку, на случай, если параметр -- строка с пробелами
+	public function add($vars){
+		$this->argsCounter += 1+count($vars);
+		$command="$".strlen("add")."\r\n"."add"."\r\n";
+		foreach($vars as $value){
+			$command.="$".strlen($value)."\r\n".$value."\r\n";
+		}
+		array_push($this->cmdlist,$command);
 		return $this->exec();
 
 	}
-	public function get($id){
-		$this->cmdlist[]="get ".$id; //Todo: Добавить проверку, на случай, если параметр -- строка с пробелами
+	public function get($vars){
+		$this->argsCounter += 1+count($vars);
+		$command="$".strlen("add")."\r\n"."add"."\r\n";
+		foreach($vars as $value){
+			$command.="$".strlen($value)."\r\n".$value."\r\n";
+		}
+		array_push($this->cmdlist,$command);
 		return $this->exec();
 	}
 	public function set($data, $id){
-		$this->cmdlist[]="set ".$id." ".$data; //Todo: Добавить проверку, на случай, если параметр -- строка с пробелами
+		$this->argsCounter += 1+count($vars);
+		$command="$".strlen("add")."\r\n"."add"."\r\n";
+		foreach($vars as $value){
+			$command.="$".strlen($value)."\r\n".$value."\r\n";
+		}
+		array_push($this->cmdlist,$command);
 		return $this->exec();
 	}
 	public function tsend(){
