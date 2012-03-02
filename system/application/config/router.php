@@ -64,5 +64,17 @@
 			'run' => 'directory/getcontent',
 			'layout' => false,
 			'view' => 'json'
+		),
+		'SaveFile' => array(
+			'regexp' => 'file/save',
+			'run' => 'file/save',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'LoadFile' => array(
+			'regexp' => 'file/load',
+			'run' => 'file/load',
+			'layout' => false,
+			'view' => 'json'
 		)
 	);

@@ -134,7 +134,7 @@ class FileModel implements IModel{
 	/*
 	 * Загрузить файл на сервер.
 	 */
-	public function load_file($userId, $userPath){
+	public function load_file($userId, $userPath,$host){
 		try{
 			$serverPath = \System\Config::instance()->filetransfer['serverpath'].DirectoryModel::make_server_path($userId,$userPath);
 			$this->get_by('fullname', $serverPath);
@@ -147,7 +147,10 @@ class FileModel implements IModel{
 				$bu_servers = explode(',', $this->fileData['bu_server']);
 				while(!empty($bu_servers) || $result){
 					$server = array_shift($bu_servers);
-					$ftp = ftp_ssl_connect($server);
+					$ftp = ftp_connect($server);
+					$isLogin = ftp_login($ftp,$server->username,$server->password);
+					if(!$isLogin)
+						throw new Exception("Can't login");
 					if(!$ftp)
 						throw new Exception("Could not connect to web-server while loading file.");
 					$localPath = \System\Config::instance()->filetransfer['localtmp'].'/'.md5($serverPath);
@@ -156,7 +159,7 @@ class FileModel implements IModel{
 				if(!$result)
 					throw new Exception("Couldn't find file. Please contact with our manager");
 			}
-			if($this->post_file($localPath)!==true)
+			if($this->post_file($localPath,$host)!==true)
 				throw new Exception("Coudn't get file from server.");
 			unlink($localPath);
 			return true;
@@ -173,9 +176,8 @@ class FileModel implements IModel{
 	 * @return bool|Exception
 	 * @throws Exception
 	 */
-	private function post_file($filePath){
+	private function post_file($filePath,$host){
 		try{
-			$host=\System\Config::instance()->filetransfer['fileposturl'];
 			$file_send=$filePath;
 			$boundary = md5(rand(0,32000));
 			$filesize = filesize($file_send);
@@ -228,42 +230,57 @@ class FileModel implements IModel{
 	 * Параметры файла сохраняются в базу.
 	 * @param $userId
 	 * @param $userPath
+	 * @param $filename
 	 * @param $localFilePath
 	 * @param int $bu_serverCount
 	 * @return bool|string
 	 * @throws Exception
 	 */
-	public function save_file($userId,$userPath, $filename, $localFilePath, $bu_serverCount = 2){
-
-		$servers = \ServerModel::get_servers($bu_serverCount+1);
-		$bu_servers = array();
+	public function save_file($userId,$userPath, $filename, $localFilePath,$filesize, $bu_serverCount = 2){
 		try{
+
+			$servers = \ServerModel::get_servers($bu_serverCount+1);
+			$bu_servers = array();
 			//Сохраняем файл на первичный сервер
 			$server = array_shift($servers);
 			if(!$server){
 				throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
 			}
-			$ftp = ftp_ssl_connect($server->ip);
+			$ftp = ftp_connect($server->ip);
+			$isLogin = ftp_login($ftp,$server->username,$server->password);
+				if(!$isLogin)
+					throw new Exception("Can't login");
 			$serverFilePath = \DirectoryModel::make_server_path($userId,$userPath,$server);
-			$result = ftp_put($ftp, $serverFilePath, $localFilePath, FTP_BINARY);
+			$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
 			}
+			\DirectoryModel::save_path($userId,$userPath);
+			$this->save_file_path($userId,$userPath,$filename);
 			$this->fileData['server'] = $server->id;
+			$server->add_datasize($filesize)
+				   ->refresh();
 
 			//Сохраняем в БэкАп сервера
-			for($i = 0; $i < $bu_serverCount; $i++){
+			while(isset($servers[0])){
 					$server = array_shift($servers);
 					if(!$server){
 						throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
 					}
-					$ftp = ftp_ssl_connect($server);
-				$result = ftp_put($ftp, $serverFilePath, $localFilePath, FTP_BINARY);
+				$ftp = ftp_connect($server);
+				$isLogin = ftp_login($ftp,$server->username,$server->password);
+				if(!$isLogin)
+					throw new Exception("Can't login");
+				$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 				if(!$result){
 					throw new Exception('Internal error: Can not save file to server '.$server);
 				}
 
+				\DirectoryModel::save_path($userId,$userPath);
+				$this->save_file_path($userId,$userPath,$filename);
 				$bu_servers[] = $server->id;
+				$server->add_datasize($filesize)
+					   ->refresh();
 			}
 			preg_match('|[w+\.]\.(w+)$|',$filename,$matches); //ToDo: переписать РегЭксп на выборку пути, расширения и имени файла
 			$this->fileData['name']= $filename;
@@ -283,6 +300,10 @@ class FileModel implements IModel{
 			return $e->getMessage();
 		}
 
+	}
+	private function save_file_path($userId,$userPath,$fileName){
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$redis->sadd($userId.'/'.md5($userPath).'/', $fileName);
 	}
 
 	function new_inst(){

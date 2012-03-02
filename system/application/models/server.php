@@ -35,15 +35,26 @@ class ServerModel implements IModel{
 
 	static public function get_servers($count=1){
 		$result = array();
-		$redis = new \Cache\Redis();
-		$servers = $redis->zrange('servers','0 '.$count+1);
-		$servers = array_slice($servers,1,$count);
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$servers = $redis->zrange('servers','0', $count+1)->exec();
+		$servers = array_slice($servers,0,$count);
 		foreach($servers as $value){
 			$server = new ServerModel();
 			$server->get_server_by_id($value);
 			$result[] = $server;
 		}
 		return $result;
+	}
+	public function add_datasize($size){
+		$this->data['nonfreesize']+=$size;
+		return $this;
+	}
+	public function refresh(){
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$workload = $this->data['disksize']/100;
+		$workload = $this->data['datasize']/$workload;
+		$redis->zadd('servers',$workload,$this->data['id']);
+	return $this;
 	}
 
 	function new_inst(){

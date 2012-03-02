@@ -56,7 +56,7 @@ class DirectoryModel implements IModel{
 	 * @param $userId
 	 * @param $userPath
 	 */
-	public function make_path($userId, $userPath){
+	static public function save_path($userId, $userPath){
 		$isDir = false;
 		$redis = new \Cache\Redis('81.17.140.102','6379');
 		$separator = substr($userPath, -1);
