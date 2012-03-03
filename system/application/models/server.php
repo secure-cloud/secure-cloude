@@ -33,6 +33,34 @@ class ServerModel implements IModel{
 		return $this->get_param($name);
 	}
 
+	/**
+	 * Сохраняетпараметры текущий файл в базу либо создает  новую запись в базе, если в параметрах текущего файла
+	 * не указан ID
+	 *
+	 * @return int|null
+	 */
+	public function save_params(){
+		$currentFilesDB = new \DB\MySQL('servers');
+		$update=array();
+		if($this->data['id']){
+			foreach($this->data as $rowName => $value){
+				if ($rowName!='id'){
+					$update[$rowName]=$value;
+				}
+			}
+			return $currentFilesDB->update($update)
+				->exec();
+		}
+		else{
+			foreach($this->data as $rowName => $value){
+				$update[$rowName]=$value;
+				return $currentFilesDB->insert($update)
+					->exec();
+			}
+		}
+		return NULL;
+
+	}
 	static public function get_servers($count=1){
 		$result = array();
 		$redis = new \Cache\Redis('81.17.140.102','6379');
@@ -45,15 +73,19 @@ class ServerModel implements IModel{
 		}
 		return $result;
 	}
+	public function del_datasize($size){
+		$this->data['datasize']-=$size;
+		return $this;
+	}
 	public function add_datasize($size){
-		$this->data['nonfreesize']+=$size;
+		$this->data['datasize']+=$size;
 		return $this;
 	}
 	public function refresh(){
 		$redis = new \Cache\Redis('81.17.140.102','6379');
 		$workload = $this->data['disksize']/100;
 		$workload = $this->data['datasize']/$workload;
-		$redis->zadd('servers',$workload,$this->data['id']);
+		$redis->zadd('servers',$workload,$this->data['id'])->exec();
 	return $this;
 	}
 

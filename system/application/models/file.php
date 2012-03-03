@@ -11,9 +11,18 @@ class FileModel implements IModel{
 	public function get_by($paramType, $paramValue){
 		$this->fileData=array();
 		$fileDB = new \DB\MySQL('files');
-		$file = $fileDB->select()
-			->where($paramType.' = ?', $paramValue)
-			->first();
+		if(!is_scalar($paramType)){
+			$whereParams = join(' = ? ', $paramType);
+			$whereParams .=' = ?';
+			$file = $fileDB->select()
+				->where($whereParams , $paramValue)
+				->first();
+		}
+		else{
+			$file = $fileDB->select()
+				->where($paramType.' = ?', $paramValue)
+				->first();
+		}
 		if($file){
 			foreach($file as $rowName => $value){
 				$this->fileData[$rowName] = $value;
@@ -22,6 +31,21 @@ class FileModel implements IModel{
 		}
 		else return NULL;
 	}
+	public function get_unic($path, $name){
+		$this->fileData=array();
+		$fileDB = new \DB\MySQL('files');
+			$file = $fileDB->select()
+				->where('path = ? AND name = ? ', $path, $name)
+				->first();
+		if($file){
+			foreach($file as $rowName => $value){
+				$this->fileData[$rowName] = $value;
+			}
+			return $this;
+		}
+		else return NULL;
+	}
+
 	/**
 	 * Возвращает либо параметр из $fileData либо NULL если параметра нет
 	 * @param $paramType
@@ -40,6 +64,19 @@ class FileModel implements IModel{
 	 */
 	public function __get($name){
 		return $this->get_param($name);
+	}
+	public function get_file_data($filePath,$fileName){
+		$fileDB = new \DB\MySQL('files');
+		$file = $fileDB ->select()
+						->where('path = ? AND name = ?', $filePath, $fileName)
+						->first();
+		if ($user){
+			foreach($user as $rowName => $value){
+				$this->editableUser[$rowName] = $value;
+			}
+			return $this;
+		}
+		else return NULL;
 	}
 	/**
 	 * Устанавливает параметр текущей файла
@@ -66,7 +103,7 @@ class FileModel implements IModel{
 	public function save_params(){
 		$currentFilesDB = new \DB\MySQL('files');
 		$update=array();
-		if($this->fileData['id']){
+		if(isset($this->fileData['id'])){
 			foreach($this->fileData as $rowName => $value){
 				if ($rowName!='id'){
 					$update[$rowName]=$value;
@@ -76,32 +113,14 @@ class FileModel implements IModel{
 				->exec();
 		}
 		else{
-			foreach($this->fileData as $rowName => $value){
+			foreach($this->fileData as $rowName => $value)
 				$update[$rowName]=$value;
-				return $currentFilesDB->insert($update)
+			return $currentFilesDB->insert($update)
 					->exec();
-			}
-		}
-		return NULL;
 
-	}
-	/*
-	 * Функция сохраняет файл или папку в redis для последующей работы с каталогами
-	 */
-	public function set_into_catalog($userId, $userPath){
-		$path = DirectoryModel::make_server_path($userId, $userPath);
-		if(substr($path, -1)=='\\' || substr($path, -1)=='/'){ //Если true, то счситаем, что работаем с каталогом
-			preg_match('(.*\\)(w+\\)$', $path, $matches);
-			$redis = new \Cache\Redis;
-			$redis->sadd($matches[2],$matches[1]);
-			return $this;
-		}else{
-			preg_match('(.*\\)(w+\.?w*)$', $path, $matches);
-			$redis = new \Cache\Redis;
-			$redis->sadd($matches[2],$matches[1]);
-			return $this;
 		}
 	}
+
 	/*
 	 * Функция извлекает из Redis содержимое указанного каталога.
 	 */
@@ -232,13 +251,30 @@ class FileModel implements IModel{
 	 * @param $userPath
 	 * @param $filename
 	 * @param $localFilePath
+	 * @param $filesize
+	 * @param $hash
+	 * @param $timeStamp
 	 * @param int $bu_serverCount
 	 * @return bool|string
 	 * @throws Exception
 	 */
-	public function save_file($userId,$userPath, $filename, $localFilePath,$filesize, $bu_serverCount = 2){
+	public function save_file($userId, $userPath, $filename, $localFilePath, $filesize, $hash, $timeStamp, $bu_serverCount = 2){
 		try{
+			if($hash != md5_file($localFilePath))
+				throw new Exception('Wrong hash sum. Probably file was broken');
+			$fileExist = $this->get_unic($userPath,$filename);
+			if($fileExist != NULL){
+				return $this->reload($hash, $timeStamp,$filesize,$localFilePath);
+			}
 
+			//дополним пользовательский путь нужным слэшем, чтобы обоззначить его, как директорию
+			$separator = substr($userPath, -1);
+			if($separator != '\\' && $separator != '/'){
+				if(preg_match('|/|', $userPath)>0)
+					$userPath.='/';
+				else
+					$userPath.='\\';
+			}
 			$servers = \ServerModel::get_servers($bu_serverCount+1);
 			$bu_servers = array();
 			//Сохраняем файл на первичный сервер
@@ -255,11 +291,10 @@ class FileModel implements IModel{
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
 			}
-			\DirectoryModel::save_path($userId,$userPath);
-			$this->save_file_path($userId,$userPath,$filename);
 			$this->fileData['server'] = $server->id;
 			$server->add_datasize($filesize)
-				   ->refresh();
+				   ->save_params();
+			$server->refresh();
 
 			//Сохраняем в БэкАп сервера
 			while(isset($servers[0])){
@@ -275,19 +310,18 @@ class FileModel implements IModel{
 				if(!$result){
 					throw new Exception('Internal error: Can not save file to server '.$server);
 				}
-
-				\DirectoryModel::save_path($userId,$userPath);
-				$this->save_file_path($userId,$userPath,$filename);
 				$bu_servers[] = $server->id;
 				$server->add_datasize($filesize)
-					   ->refresh();
+					   ->save_params();
+				$server->refresh();
 			}
-			preg_match('|[w+\.]\.(w+)$|',$filename,$matches); //ToDo: переписать РегЭксп на выборку пути, расширения и имени файла
+			\DirectoryModel::save_path($userId,$userPath);
+			$this->save_file_path($userId,$userPath,$filename);
 			$this->fileData['name']= $filename;
-			$this->fileData['ext']= $matches[1];
 			$this->fileData['path']= $userPath;
 			$this->fileData['bu_server']=join(',', $bu_servers);
 			$this->fileData['hash'] = md5_file($localFilePath);
+			$this->fileData['ouner_id'] = $userId;
 
 
 			$this->save_params();
@@ -301,9 +335,64 @@ class FileModel implements IModel{
 		}
 
 	}
+	private function reload($hash, $timestamp,$filesize,$localFilePath){
+		if($this->hash != $hash && $this->time != $timestamp){
+			$bu_servers = array();
+			//Сохраняем файл на первичный сервер
+			$server = new ServerModel;
+			$server->get_server_by_id($this->server);
+			$ftp = ftp_connect($server->ip);
+			$isLogin = ftp_login($ftp,$server->username,$server->password);
+			if(!$isLogin)
+				throw new Exception("Can't login");
+			$serverFilePath = \DirectoryModel::make_server_path($this->ouner_id,$this->path,$server);
+			$result = ftp_put($ftp, $serverFilePath.$this->name, $localFilePath, FTP_BINARY);
+			if(!$result){
+				throw new Exception('Internal error: Can not save file to server '.$server);
+			}
+			$server ->del_datasize($this->file_size)
+					->add_datasize($filesize)
+					->save_params();
+			$server->refresh();
+
+			//Сохраняем в БэкАп сервера
+			$serverIdArr = $this->bu_server;
+			foreach($serverIdArr as $serverId){
+				$server = new ServerModel;
+				$server->get_server_by_id($serverId);
+				if(!$server){
+					throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
+				}
+				$ftp = ftp_connect($server);
+				$isLogin = ftp_login($ftp,$server->username,$server->password);
+				if(!$isLogin)
+					throw new Exception("Can't login");
+				$result = ftp_put($ftp, $serverFilePath.$this->name, $localFilePath, FTP_BINARY);
+				if(!$result){
+					throw new Exception('Internal error: Can not save file to server '.$server);
+				}
+				$bu_servers[] = $server->id;
+				$server ->del_datasize($this->file_size)
+					->add_datasize($filesize)
+					->save_params();
+			}
+			$this->fileData['name']= $this->name;
+			$this->fileData['path']= $this->path;
+			$this->fileData['bu_server']=join(',', $bu_servers);
+			$this->fileData['hash'] = md5_file($localFilePath);
+			$this->fileData['file_size'] = $filesize;
+			$this->fileData['time'] = $timestamp;
+
+
+			$this->save_params();
+			return true;
+
+		}
+	}
 	private function save_file_path($userId,$userPath,$fileName){
 		$redis = new \Cache\Redis('81.17.140.102','6379');
-		$redis->sadd($userId.'/'.md5($userPath).'/', $fileName);
+		$userPath = str_replace('\\','/', $userPath);
+		$redis->sadd($userId.'/'.md5($userPath), $fileName)->exec();
 	}
 
 	function new_inst(){

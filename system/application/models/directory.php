@@ -18,11 +18,20 @@ class DirectoryModel implements IModel{
 	  * @return string
 	  */
 	static function make_server_path($userId, $userPath, &$server){
-		if(strtolower($server->data['system']) == "windows"){
-			return $server->data['rootdir'].'/'.$userId.'/'.str_replace('\\','/',$userPath);
+		if(strtolower($server->system) == "windows"){
+			$path = $server->rootdir.$userId.'\\'.str_replace('/','\\',$userPath);
+			$separator = substr($path,-1);
+			if($separator != '\\')
+				$path.="\\";
+			return $path;
 		}else{
-			return $server->data['rootdir'].'\\'.$userId.'\\'.str_replace('/','\\',$userPath);
-		}
+			$path = $server->rootdir.$userId.'/'.str_replace('\\','/',$userPath);
+			$separator = substr($path,-1);
+			if($separator != '/')
+				$path.="/";
+			return $path;
+			}
+
 
 	}
 	/**
@@ -35,12 +44,11 @@ class DirectoryModel implements IModel{
 	public function get_content($userId, $userPath){
 		$result = array();
 		$redis = new \Cache\Redis('81.17.140.102','6379');
-		if($userPath === '')
+		if($userPath == "")
 			$objects = $redis->smembers($userId.'/')->exec();
 		else
 			$objects = $redis->smembers($userId.'/'.md5($userPath))->exec();
 		foreach($objects as $value){
-			$value = base64_decode($value);
 			$separator = substr($value,-1);
 			if($separator == '\\' || $separator == '/'){
 				$value = substr($value,0,strlen($value)-1);
@@ -65,19 +73,17 @@ class DirectoryModel implements IModel{
 		}
 		if(preg_match('|/|', $userPath) > 0){
 			$pathArray = explode('/',$userPath);
-			$path = '/';
-			$dirSep = '/';
 		}
 		else{
 			$pathArray = explode('\\',$userPath);
-			$path = '\\';
-			$dirSep = '\\';
 		}
 		foreach($pathArray as $key => $value){
 			if($value != ''){
+				$path = '';
 				$path .=$value.'/';
-				if(isset($pathArray[$key+1]) && $pathArray[$key+1]!='')
-					$redis->sadd($userId.'/'.md5($path).'/', $path.$pathArray[$key+1].'/');
+				$next = $key+1;
+				if($pathArray[$next]!='')
+					$redis->sadd($userId.'/'.md5($path), $pathArray[$next].'/')->exec();
 			}
 		}
 	}
