@@ -28,7 +28,7 @@ class FileController extends \Abstracts\Controller{
 			throw new Exception("Please set user's file Path");
 		if (!isset($this->post->filename))
 			throw new Exception("Please set file's name");
-		$this->model->file->load_file($this->post->userid,
+		$this->model->file->send_file($this->post->userid,
 			$this->post->filepath,$this->post->host);
 
 	}

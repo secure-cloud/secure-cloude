@@ -31,7 +31,7 @@ class FileModel implements IModel{
 		}
 		else return NULL;
 	}
-	public function get_unic($path, $name){
+	public function get_unic($path, $name, $userId){
 		$this->fileData=array();
 		$fileDB = new \DB\MySQL('files');
 			$file = $fileDB->select()
@@ -70,8 +70,8 @@ class FileModel implements IModel{
 		$file = $fileDB ->select()
 						->where('path = ? AND name = ?', $filePath, $fileName)
 						->first();
-		if ($user){
-			foreach($user as $rowName => $value){
+		if ($file){
+			foreach($file as $rowName => $value){
 				$this->editableUser[$rowName] = $value;
 			}
 			return $this;
@@ -150,34 +150,35 @@ class FileModel implements IModel{
 		}
 	}
 
-	/*
-	 * Загрузить файл на сервер.
+	/**
+	 * Отдает файл пользователю
+	 * @param $userId
+	 * @param $userPath
+	 * @param $fileName
+	 * @param $host
+	 * @return bool|string
+	 * @throws Exception
 	 */
-	public function load_file($userId, $userPath,$host){
+	public function send_file($userId, $userPath,$fileName,$host){
 		try{
-			$serverPath = \System\Config::instance()->filetransfer['serverpath'].DirectoryModel::make_server_path($userId,$userPath);
-			$this->get_by('fullname', $serverPath);
-			$ftp = ftp_ssl_connect($this->fileData['server']);
+			$this->get_unic($userPath,$fileName,$userId);
+			$servers[] = $this->server;
+			array_merge($servers,explode(',',$this->bu_server));
+			$ftp = false;
+			$server = NULL;
+			$isLogin = false;
+			while(isset($servers[0]) || !$ftp || !$isLogin){
+				$serverID = array_shift($servers);
+				$server = new ServerModel;
+				$server->get_server_by_id($serverID);
+				$ftp = ftp_ssl_connect($server->ip);
+				$isLogin = ftp_login($ftp,$server->username,$server->password);
+			}
 				if(!$ftp)
 					throw new Exception("Could not connect to web-server while loading file.");
-			$localPath = \System\Config::instance()->filetransfer['localtmp'].'/'.md5($serverPath);
-			$result = ftp_get($ftp,\System\Config::instance()->filetransfer['localtmp'].'/'.$localPath, $serverPath, FTP_BINARY);
-			if(!$result){
-				$bu_servers = explode(',', $this->fileData['bu_server']);
-				while(!empty($bu_servers) || $result){
-					$server = array_shift($bu_servers);
-					$ftp = ftp_connect($server);
-					$isLogin = ftp_login($ftp,$server->username,$server->password);
-					if(!$isLogin)
-						throw new Exception("Can't login");
-					if(!$ftp)
-						throw new Exception("Could not connect to web-server while loading file.");
-					$localPath = \System\Config::instance()->filetransfer['localtmp'].'/'.md5($serverPath);
-					$result = ftp_get($ftp,$localPath, $serverPath, FTP_BINARY);
-				}
-				if(!$result)
-					throw new Exception("Couldn't find file. Please contact with our manager");
-			}
+			$localPath = \System\Config::instance()->filetransfer['localtmp'].'/'.$userId.'/'.md5($userPath);
+			$serverPath = \DirectoryModel::make_server_path($userId, $userPath,$server);
+			$result = ftp_get($ftp,$localPath, $serverPath, FTP_BINARY);
 			if($this->post_file($localPath,$host)!==true)
 				throw new Exception("Coudn't get file from server.");
 			unlink($localPath);
@@ -190,8 +191,9 @@ class FileModel implements IModel{
 
 	}
 	/**
-	 * Отправляет сохраненный локально файл указанному в конфиге серверу
+	 * Отправляет файл методом POST получателю $host
 	 * @param $filePath
+	 * @param $host
 	 * @return bool|Exception
 	 * @throws Exception
 	 */
@@ -262,7 +264,7 @@ class FileModel implements IModel{
 		try{
 			if($hash != md5_file($localFilePath))
 				throw new Exception('Wrong hash sum. Probably file was broken');
-			$fileExist = $this->get_unic($userPath,$filename);
+			$fileExist = $this->get_unic($userPath,$filename,$userId);
 			if($fileExist != NULL){
 				return $this->reload($hash, $timeStamp,$filesize,$localFilePath);
 			}
