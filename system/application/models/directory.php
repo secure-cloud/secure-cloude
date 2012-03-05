@@ -51,7 +51,7 @@ class DirectoryModel implements IModel{
 		foreach($objects as $value){
 			$separator = substr($value,-1);
 			if($separator == '\\' || $separator == '/'){
-				$value = substr($value,0,strlen($value)-1);
+				//$value = substr($value,0,strlen($value)-1);
 				$result[$value]='dir';
 			}
 			else{
