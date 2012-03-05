@@ -82,11 +82,13 @@ class DirectoryModel implements IModel{
 				$path = '';
 				$path .=$value.'/';
 				$next = $key+1;
-				if($pathArray[$next]!='')
-					if($path == '')
-						$redis->sadd($userId.'/'.'', $pathArray[$next].'/')->exec();
-					else
-						$redis->sadd($userId.'/'.md5($path), $pathArray[$next].'/')->exec();
+				if($next<count($pathArray)){
+					if($pathArray[$next]!='')
+						if($path == '')
+							$redis->sadd($userId.'/'.'', $pathArray[$next].'/')->exec();
+						else
+							$redis->sadd($userId.'/'.md5($path), $pathArray[$next].'/')->exec();
+				}
 		}
 	}
 
