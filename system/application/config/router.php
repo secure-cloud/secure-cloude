@@ -76,5 +76,24 @@
 			'run' => 'file/load',
 			'layout' => false,
 			'view' => 'json'
+		),
+		'StreamLoadStart' => array(
+			'regexp' => 'file/stream/start',
+			'run' => 'file/stream_start',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'StramLoadNext' => array(
+			'regexp' => 'file/stream/next',
+			'run' => 'file/stream_next',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'StreamLoadRepeat' => array(
+			'regexp' => 'file/stream/repeat',
+			'run' => 'file/stream_repeat',
+			'layout' => false,
+			'view' => 'json'
 		)
+
 	);

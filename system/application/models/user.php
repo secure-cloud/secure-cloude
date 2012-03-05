@@ -170,7 +170,7 @@ class UserModel implements IModel{
 					$update[$rowName]=$value;
 				}
 			}
-			return $currentUserDB->update($update)->exec();
+			return $currentUserDB->update($update)->where('id = ?', $this->id)->exec();
 		}
 		else{
 			foreach($this->editableUser as $rowName => $value)
