@@ -21,7 +21,7 @@ class FileController extends \Abstracts\Controller{
 												$this->post->timestamp,
 											  2);
 			if($isSave !== true)
-				throw new Exception('error while saving file');
+				throw new Exception('error while saving file:'.$isSave->getMessage());
 			$this->view->json()->render('', array('status'=>'ok'));
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
