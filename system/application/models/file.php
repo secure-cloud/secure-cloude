@@ -261,7 +261,6 @@ class FileModel implements IModel{
 	 * @throws Exception
 	 */
 	public function save_file($userId, $userPath, $filename, $localFilePath, $filesize, $hash, $timeStamp, $bu_serverCount = 2){
-		try{
 			if($hash != md5_file($localFilePath))
 				throw new Exception('Wrong hash sum. Probably file was broken');
 			$fileExist = $this->get_unic($userPath,$filename,$userId);
@@ -328,13 +327,6 @@ class FileModel implements IModel{
 
 			$this->save_params();
 			return true;
-
-		}
-		catch(Exception $e){
-			unset($this->fileData['server']);
-			unset($this->fileData['bu_server']);
-			return $e->getMessage();
-		}
 
 	}
 	private function reload($hash, $timestamp,$filesize,$localFilePath){
