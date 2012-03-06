@@ -374,7 +374,9 @@ class FileModel implements IModel{
 	 * @return bool|string
 	 * @throws Exception
 	 */
-	public function save_file($userId, $userPath, $filename, $localFilePath, $filesize,/* $hash, $timeStamp,*/ $bu_serverCount = 2){
+	public function save_file($userId, $userPath, $filename, $localFilePath, /*$filesize, $hash, $timeStamp,*/ $bu_serverCount = 2){
+			$filesize = filesize($localFilePath);
+			$timestamp = filectime($localFilePath);
 			$fileExist = $this->get_unic($userPath,$filename,$userId);
 			if($fileExist != NULL){
 				return $this->reload($localFilePath);
@@ -436,7 +438,8 @@ class FileModel implements IModel{
 			$this->fileData['bu_server']=join(',', $bu_servers);
 			$this->fileData['hash'] = md5_file($localFilePath);
 			$this->fileData['ouner_id'] = $userId;
-
+			$this->fileData['file_size'] = $filesize;
+			$this->fileData['time'] = $timestamp;
 
 			$this->save_params();
 			return true;
