@@ -45,7 +45,7 @@
 			)
 		),
 		'filetransfer'=>array(
-			'localtmp'=>DIR_ROOT.'tmp/filetransfer/',
+			'localtmp'=>DIR_ROOT.'tmp\\filetransfer\\',
 			'serverpath'=>'/var/secure-cloud/',
 			'webserver'=>'localhost'
 

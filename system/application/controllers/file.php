@@ -30,10 +30,13 @@ class FileController extends \Abstracts\Controller{
 			if (!isset($this->post->userid) ||
 				!is_numeric($this->post->userid))
 				throw new Exception('Incorrect user ID');
-			$this->model->user->get_user_by('id','4');
-			$this->model->user->set_user_param('rootdir', '0')->save_user();
-			$file = file_get_contents('file1');
-			$this->view->json()->render('', array('status'=>'ok','file'=>$file,'EOF'=>false));
+			if (!isset($this->post->filepath))
+				throw new Exception("Please set file's Path");
+			if (!isset($this->post->filename))
+				throw new Exception("Please set name of file");
+			$result = $this->model->file->start_stream($this->post->userid, $this->post->filepath, $this->post->filename);
+			echo $result['file'];
+			//$this->view->json()->render('', array('status'=>'ok','file'=>$result['file'],'EOF'=>$result['EOF']));
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
@@ -44,25 +47,10 @@ class FileController extends \Abstracts\Controller{
 			if (!isset($this->post->userid) ||
 				!is_numeric($this->post->userid))
 				throw new Exception('Incorrect user ID');
-
-			$this->model->user->get_user_by('id','4');
-			switch($this->model->user->rootdir){
-				case 0:
-					$this->model->user->set_user_param('rootdir', '1')->save_user();
-					$file = file_get_contents('file2');
-					$this->view->json()->render('', array('status'=>'ok','file'=>$file,'EOF'=>false));
-						break;
-				case 1:
-					$this->model->user->set_user_param('rootdir', '2')->save_user();
-					$file = file_get_contents('file3');
-					$this->view->json()->render('', array('status'=>'ok','file'=>$file,'EOF'=>false));
-					break;
-				case 2:
-					$file = file_get_contents('file4');
-					$this->view->json()->render('', array('status'=>'ok','file'=>$file,'EOF'=>true));
-					break;
-				default: break;
-			}
+			$result = $this->model->file->next_part($this->post->userid);
+			header("Content-Type: application/octet-stream");
+			echo $result['file'];
+		//	$this->view->json()->render('', array('status'=>'ok','file'=>$result['file'],'EOF'=>$result['EOF']));
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
