@@ -402,7 +402,7 @@ class FileModel implements IModel{
 				if(!$isLogin)
 					throw new Exception("Can't login");
 			$serverFilePath = \DirectoryModel::make_server_path($userId,$userPath,$server);
-			ftp_mkdir($ftp, $serverFilePath);
+		//	ftp_mkdir($ftp, $serverFilePath);
 			$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
@@ -468,24 +468,26 @@ class FileModel implements IModel{
 
 			//Сохраняем в БэкАп сервера
 			$serverIdArr = $this->bu_server;
-			foreach($serverIdArr as $serverId){
-				$server = new ServerModel;
-				$server->get_server_by_id($serverId);
-				if(!$server){
-					throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
+			if(is_array($serverIdArr)){
+				foreach($serverIdArr as $serverId){
+					$server = new ServerModel;
+					$server->get_server_by_id($serverId);
+					if(!$server){
+						throw new Exception('Error while choosing server: Sorry, but all servers are unavaliable');
+					}
+					$ftp = ftp_connect($server);
+					$isLogin = ftp_login($ftp,$server->username,$server->password);
+					if(!$isLogin)
+						throw new Exception("Can't login");
+					$result = ftp_put($ftp, $serverFilePath.$this->name, $localFilePath, FTP_BINARY);
+					if(!$result){
+						throw new Exception('Internal error: Can not save file to server '.$server);
+					}
+					$bu_servers[] = $server->id;
+					$server ->del_datasize($this->file_size)
+						->add_datasize($filesize)
+						->save_params();
 				}
-				$ftp = ftp_connect($server);
-				$isLogin = ftp_login($ftp,$server->username,$server->password);
-				if(!$isLogin)
-					throw new Exception("Can't login");
-				$result = ftp_put($ftp, $serverFilePath.$this->name, $localFilePath, FTP_BINARY);
-				if(!$result){
-					throw new Exception('Internal error: Can not save file to server '.$server);
-				}
-				$bu_servers[] = $server->id;
-				$server ->del_datasize($this->file_size)
-					->add_datasize($filesize)
-					->save_params();
 			}
 			$this->fileData['name']= $this->name;
 			$this->fileData['path']= $this->path;

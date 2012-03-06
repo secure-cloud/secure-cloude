@@ -52,11 +52,12 @@ class DirectoryModel implements IModel{
 			$separator = substr($value,-1);
 			if($separator == '\\' || $separator == '/'){
 				//$value = substr($value,0,strlen($value)-1); //Эта строчка на случай, если надо, чтоб директории приходили без слешей
-				$result[$value]='dir';
-
+				$result[$value]=array('type'=>'dir');
 			}
 			else{
-				$result[$value]='file';
+				$file = new FileModel();
+				$file->get_unic($userPath,$value,$userId);
+				$result[$value]=array('type'=>'file','time'=>$file->time,'size'=>$file->file_size);
 			}
 		}
 		return $result;
