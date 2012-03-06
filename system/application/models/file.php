@@ -283,10 +283,8 @@ class FileModel implements IModel{
 			}
 			$postString .= $status;
 			$strEnd = strpos($postString, "|\n\n\n\n|");
-			if($strEnd){
+			if($strEnd)
 				$stopRead = true;
-				$postString = substr($postString,0,$strEnd);
-			}
 		}
 		$strEnd+=$user->stream_end;
 		$user->set_user_param('stream_end', $strEnd);
