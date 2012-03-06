@@ -167,7 +167,7 @@ class FileModel implements IModel{
 			$ftp = false;
 			$server = NULL;
 			$isLogin = false;
-			while(isset($servers[0]) || !$ftp || !$isLogin){
+			while(isset($servers[0]) || !$isLogin){
 				$serverID = array_shift($servers);
 				$server = new ServerModel;
 				$server->get_server_by_id($serverID);
@@ -188,6 +188,115 @@ class FileModel implements IModel{
 			unlink($localPath);
 			return $e->getMessage();
 		}
+
+	}
+	/**
+	 * Сохраняет в локальное хранилище файл. Одновременно читать можно только из одного файла.
+	 * Возвращат массив с первой частью файла (до |\n\n\n\n|) и флаг окончания файла(закончился файл или нет)
+	 * Если чтение завершено, то файл удаляется.
+	 * @param $userId
+	 * @param $userPath
+	 * @param $fileName
+	 * @return array
+	 * @throws Exception
+	 */
+	public function start_stream($userId, $userPath,$fileName){
+		$this->get_unic($userPath,$fileName,$userId);
+		$servers[] = $this->server;
+		array_merge($servers,explode(',',$this->bu_server));
+		$ftp = false;
+		$server = NULL;
+		$isLogin = false;
+		while(isset($servers[0]) || !$isLogin){
+			$serverID = array_shift($servers);
+			$server = new ServerModel;
+			$server->get_server_by_id($serverID);
+			$ftp = ftp_connect($server->ip);
+			$isLogin = ftp_login($ftp,$server->username,$server->password);
+		}
+		if(!$ftp)
+			throw new Exception("Could not connect to web-server while loading file.");
+		$localPath = \System\Config::instance()->filetransfer['localtmp'].'filestream/'.$userId.'/';
+		$serverPath = \DirectoryModel::make_server_path($userId, $userPath,$server);
+		if(!is_dir($localPath))
+			mkdir($localPath, 0777, true);
+		$result = ftp_get($ftp,$localPath.'/stream.tmp', $serverPath.$fileName, FTP_BINARY);
+		$user = new UserModel();
+		$user->get_user_by('id',$userId);
+		$user->set_user_param('stream_start','0');
+		$user->set_user_param('stream_end', '0');
+		$file = fopen($localPath.'/stream.tmp','rb');
+		$postString = '';
+		$stopRead = false;
+		$EOF = false;
+		$strEnd = 0;
+		while(!$stopRead){
+			$status = fgets($file, 256);
+			if(!$status){
+				$EOF = true;
+				break;
+			}
+			$postString .= $status;
+			$strEnd = strpos($postString, "|\n\n\n\n|");
+			if($strEnd)
+				$stopRead = true;
+		}
+		$strEnd+=6;
+		if ($strEnd<6)
+			throw new Exception('Bad File');
+		$user->set_user_param('stream_end', $strEnd);
+		$user->save_user();
+		$status = fgets($file, 256);
+		if(!$status){
+			$EOF = true;
+			unlink($file);
+		}
+		return array('file'=>$postString,'EOF'=>$EOF);
+	}
+	/**
+	 * Читает Следующий кусочек ранее открытого при помощи start_stream файла
+	 * Возврашает такой же массив данных, что и start_stream и Так же удаляет файл, если он закончился
+	 * @param $userId
+	 * @return array
+	 * @throws Exception
+	 */
+	function next_part($userId){
+		$localPath = \System\Config::instance()->filetransfer['localtmp'].'filestream/'.$userId.'/';
+		$user = new UserModel();
+		$user->get_user_by('id',$userId);
+		$streamStartPos = $user->stream_end+6;
+		$user->set_user_param('stream_start', $streamStartPos);
+		$file = fopen($localPath.'/stream.tmp','rb');
+		fseek($file,$streamStartPos);
+		if(!$file)
+			throw new Exception('Last file alrady read and deleted. Try to reopen it.');
+		$postString = '';
+		$stopRead = false;
+		$EOF = false;
+		$strEnd = 0;
+		while(!$stopRead){
+			$status = fgets($file, 256);
+			if(!$status){
+				$EOF = true;
+				break;
+			}
+			$postString .= $status;
+			$strEnd = strpos($postString, "|\n\n\n\n|");
+			if($strEnd)
+				$stopRead = true;
+		}
+		$strEnd-=6;
+		if ($strEnd<0)
+			throw new Exception('Bad File');
+		$strEnd+=$streamStartPos;
+		$user->set_user_param('stream_end', $strEnd);
+		$user->save_user();
+		$status = fgets($file, 256);
+		if(!$status){
+			$EOF = true;
+			unlink($file);
+		}
+		return array('file'=>$postString,'EOF'=>$EOF);
 
 	}
 	/**
@@ -319,7 +428,7 @@ class FileModel implements IModel{
 			\DirectoryModel::save_path($userId,$userPath);
 			$this->save_file_path($userId,$userPath,$filename);
 			$this->fileData['name']= $filename;
-			$this->fileData['path']= $userPath;
+			$this->fileData['path']= str_replace('\\','/',$userPath);
 			$this->fileData['bu_server']=join(',', $bu_servers);
 			$this->fileData['hash'] = md5_file($localFilePath);
 			$this->fileData['ouner_id'] = $userId;
