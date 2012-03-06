@@ -219,7 +219,7 @@ class FileModel implements IModel{
 		$localPath = \System\Config::instance()->filetransfer['localtmp'].'filestream/'.$userId.'/';
 		$serverPath = \DirectoryModel::make_server_path($userId, $userPath,$server);
 		if(!is_dir($localPath))
-			mkdir($localPath, 0777, true);
+			mkdir($localPath, 0600, true);
 		$result = ftp_get($ftp,$localPath.'/stream.tmp', $serverPath.$fileName, FTP_BINARY);
 		$user = new UserModel();
 		$user->get_user_by('id',$userId);
