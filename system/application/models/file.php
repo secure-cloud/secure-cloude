@@ -220,7 +220,7 @@ class FileModel implements IModel{
 		$serverPath = \DirectoryModel::make_server_path($userId, $userPath,$server);
 		var_dump($localPath);
 		if(!is_dir($localPath))
-			mkdir($localPath, 0600, true);
+			mkdir($localPath, 0777, true);
 		$result = ftp_get($ftp,$localPath.'/stream.tmp', $serverPath.$fileName, FTP_BINARY);
 		$user = new UserModel();
 		$user->get_user_by('id',$userId);
