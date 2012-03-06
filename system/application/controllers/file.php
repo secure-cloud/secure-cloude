@@ -39,7 +39,10 @@ class FileController extends \Abstracts\Controller{
 			echo $result['file'];
 			//$this->view->json()->render('', array('status'=>'ok','file'=>$result['file'],'EOF'=>$result['EOF']));
 		} catch (Exception $e) {
-			$this->view->json()->render('', array('error'=>$e->getMessage()));
+			if($e->getCode()==2000)
+				echo $e->getMessage();
+			else
+				$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
 
 	}
@@ -53,7 +56,11 @@ class FileController extends \Abstracts\Controller{
 			echo $result['file'];
 		//	$this->view->json()->render('', array('status'=>'ok','file'=>$result['file'],'EOF'=>$result['EOF']));
 		} catch (Exception $e) {
-			$this->view->json()->render('', array('error'=>$e->getMessage()));
+			if($e->getCode()==2000)
+				echo $e->getMessage();
+			else
+				$this->view->json()->render('', array('error'=>$e->getMessage()));
+
 		}
 	}
 	public function stream_current_action(){

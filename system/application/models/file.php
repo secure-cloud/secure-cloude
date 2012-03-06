@@ -225,6 +225,8 @@ class FileModel implements IModel{
 		$user->get_user_by('id',$userId);
 		$user->set_user_param('stream_start','0');
 		$user->set_user_param('stream_end', '0');
+		if(!is_file($localPath.'/stream.tmp'))
+			throw new Exception('EOF',2000);
 		$file = fopen($localPath.'/stream.tmp','rb');
 		$postString = '';
 		$stopRead = false;
@@ -267,6 +269,8 @@ class FileModel implements IModel{
 		$user = new UserModel();
 		$user->get_user_by('id',$userId);
 		$user->set_user_param('stream_start', $user->stream_end);
+		if(!is_file($localPath.'/stream.tmp'))
+			throw new Exception('EOF',2000);
 		$file = fopen($localPath.'/stream.tmp','rb');
 		fseek($file,$user->stream_end);
 		if(!$file)
