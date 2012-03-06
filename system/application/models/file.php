@@ -519,6 +519,7 @@ class FileModel implements IModel{
 		$redis->srem($userId.'/'.md5($userPath), $fileName)->exec();
 		$fileDB = new \DB\MySQL('file');
 		$this->get_unic($userPath,$fileName,$userId);
+		$fileDB->delete()->where('id=?',$this->id)->exec();
 	}
 
 	function new_inst(){

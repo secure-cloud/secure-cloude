@@ -71,6 +71,12 @@
 			'layout' => false,
 			'view' => 'json'
 		),
+		'DeleteDir' => array(
+			'regexp' => 'dir/delete',
+			'run' => 'directory/dir_remove',
+			'layout' => false,
+			'view' => 'json'
+		),
 		'SaveFile' => array(
 			'regexp' => 'file/save',
 			'run' => 'file/save',
@@ -80,6 +86,25 @@
 		'LoadFile' => array(
 			'regexp' => 'file/load',
 			'run' => 'file/load',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'DeleteFile' => array(
+			'regexp' => 'file/delete',
+			'run' => 'file/fremove',
+			'layout' => false,
+			'view' => 'json'
+		),
+
+		'MoveFile' => array(
+			'regexp' => 'file/move',
+			'run' => 'file/fmove',
+			'layout' => false,
+			'view' => 'json'
+		),
+		'CopyFile' => array(
+			'regexp' => 'file/copy',
+			'run' => 'file/fcopy',
 			'layout' => false,
 			'view' => 'json'
 		),

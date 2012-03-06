@@ -92,6 +92,11 @@ class DirectoryModel implements IModel{
 		}
 	}
 
+	public function dir_remove($userId,$userPath,$dirName){
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$redis->srem($userId.'/'.md5($userPath), $dirName)->exec();
+	}
+
 	function new_inst(){
 		return new self;
 	}

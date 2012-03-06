@@ -69,7 +69,57 @@ class FileController extends \Abstracts\Controller{
 		}
  
 	}
+	public function fcopy_action(){
+		try{
+			if (!isset($this->post->userid) ||
+				!is_numeric($this->post->userid))
+				throw new Exception('Incorrect user ID');
+			if (!isset($this->post->filepath))
+				throw new Exception("Please set file's Path");
+			if (!isset($this->post->filename))
+				throw new Exception("Please set name of file");
+			if (!isset($this->post->newfilepath))
+				throw new Exception("Please set file's Path");
 
+			$this->model->file->file_copy($this->post->userid, $this->post->filepath, $this->post->filename, $this->post->newfilepath);
+			$this->view->json()->render('', array('status'=>'ok'));
+		} catch (Exception $e) {
+			$this->view->json()->render('', array('error'=>$e->getMessage()));
+		}
+	}
+	public function fmove_action(){
+		try{
+			if (!isset($this->post->userid) ||
+				!is_numeric($this->post->userid))
+				throw new Exception('Incorrect user ID');
+			if (!isset($this->post->filepath))
+				throw new Exception("Please set file's Path");
+			if (!isset($this->post->filename))
+				throw new Exception("Please set name of file");
+			if (!isset($this->post->newfilepath))
+				throw new Exception("Please set file's Path");
 
+			$this->model->file->file_move($this->post->userid, $this->post->filepath, $this->post->filename, $this->post->newfilepath);
+			$this->view->json()->render('', array('status'=>'ok'));
+		} catch (Exception $e) {
+			$this->view->json()->render('', array('error'=>$e->getMessage()));
+		}
+	}
+	public function fremove_action(){
+		try{
+			if (!isset($this->post->userid) ||
+				!is_numeric($this->post->userid))
+				throw new Exception('Incorrect user ID');
+			if (!isset($this->post->filepath))
+				throw new Exception("Please set file's Path");
+			if (!isset($this->post->filename))
+				throw new Exception("Please set name of file");
+
+			$this->model->file->file_remove($this->post->userid, $this->post->filepath, $this->post->filename);
+			$this->view->json()->render('', array('status'=>'ok'));
+		} catch (Exception $e) {
+			$this->view->json()->render('', array('error'=>$e->getMessage()));
+		}
+	}
 
 }
