@@ -35,6 +35,7 @@ class FileController extends \Abstracts\Controller{
 			if (!isset($this->post->filename))
 				throw new Exception("Please set name of file");
 			$result = $this->model->file->start_stream($this->post->userid, $this->post->filepath, $this->post->filename);
+			header("Content-Type: application/octet-stream");
 			echo $result['file'];
 			//$this->view->json()->render('', array('status'=>'ok','file'=>$result['file'],'EOF'=>$result['EOF']));
 		} catch (Exception $e) {

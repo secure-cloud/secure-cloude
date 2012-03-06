@@ -264,10 +264,9 @@ class FileModel implements IModel{
 		$localPath = \System\Config::instance()->filetransfer['localtmp'].'filestream/'.$userId.'/';
 		$user = new UserModel();
 		$user->get_user_by('id',$userId);
-		$streamStartPos = $user->stream_end+6;
-		$user->set_user_param('stream_start', $streamStartPos);
+		$user->set_user_param('stream_start', $user->stream_end);
 		$file = fopen($localPath.'/stream.tmp','rb');
-		fseek($file,$streamStartPos);
+		fseek($file,$user->stream_end);
 		if(!$file)
 			throw new Exception('Last file alrady read and deleted. Try to reopen it.');
 		$postString = '';
@@ -285,16 +284,13 @@ class FileModel implements IModel{
 			if($strEnd)
 				$stopRead = true;
 		}
-		$strEnd-=6;
-		if ($strEnd<0)
-			throw new Exception('Bad File');
-		$strEnd+=$streamStartPos;
+		$strEnd+=$user->stream_end;
 		$user->set_user_param('stream_end', $strEnd);
 		$user->save_user();
 		$status = fgets($file, 256);
 		if(!$status){
 			$EOF = true;
-			unlink($file);
+			unlink($localPath.'/stream.tmp');
 		}
 		return array('file'=>$postString,'EOF'=>$EOF);
 
@@ -397,6 +393,7 @@ class FileModel implements IModel{
 				if(!$isLogin)
 					throw new Exception("Can't login");
 			$serverFilePath = \DirectoryModel::make_server_path($userId,$userPath,$server);
+			ftp_mkdir($ftp, $serverFilePath);
 			$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
@@ -496,6 +493,27 @@ class FileModel implements IModel{
 		$redis = new \Cache\Redis('81.17.140.102','6379');
 		$userPath = str_replace('\\','/', $userPath);
 		$redis->sadd($userId.'/'.md5($userPath), $fileName)->exec();
+	}
+	public function file_copy($userId,$userPath,$fileName,$newPath){
+		\DirectoryModel::save_path($userId,$newPath);
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$userPath = str_replace('\\','/', $newPath);
+		$redis->sadd($userId.'/'.md5($newPath), $fileName)->exec();
+
+	}
+	public function file_move($userId,$userPath,$fileName,$newPath){
+		\DirectoryModel::save_path($userId,$newPath);
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$userPath = str_replace('\\','/', $newPath);
+		$redis->sadd($userId.'/'.md5($newPath), $fileName)->exec();
+		$redis->srem($userId.'/'.md5($userPath), $fileName)->exec();
+	}
+
+	public function file_remove($userId,$userPath,$fileName){
+		$redis = new \Cache\Redis('81.17.140.102','6379');
+		$redis->srem($userId.'/'.md5($userPath), $fileName)->exec();
+		$fileDB = new \DB\MySQL('file');
+		$this->get_unic($userPath,$fileName,$userId);
 	}
 
 	function new_inst(){

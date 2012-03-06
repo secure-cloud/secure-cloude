@@ -65,6 +65,12 @@
 			'layout' => false,
 			'view' => 'json'
 		),
+		'MakeDir' => array(
+			'regexp' => 'dir/make',
+			'run' => 'directory/make',
+			'layout' => false,
+			'view' => 'json'
+		),
 		'SaveFile' => array(
 			'regexp' => 'file/save',
 			'run' => 'file/save',
