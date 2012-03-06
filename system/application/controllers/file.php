@@ -67,7 +67,7 @@ class FileController extends \Abstracts\Controller{
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
-
+ 
 	}
 
 
