@@ -370,12 +370,10 @@ class FileModel implements IModel{
 	 * @return bool|string
 	 * @throws Exception
 	 */
-	public function save_file($userId, $userPath, $filename, $localFilePath, $filesize, $hash, $timeStamp, $bu_serverCount = 2){
-			if($hash != md5_file($localFilePath))
-				throw new Exception('Wrong hash sum. Probably file was broken');
+	public function save_file($userId, $userPath, $filename, $localFilePath, $filesize,/* $hash, $timeStamp,*/ $bu_serverCount = 2){
 			$fileExist = $this->get_unic($userPath,$filename,$userId);
 			if($fileExist != NULL){
-				return $this->reload($hash, $timeStamp,$filesize,$localFilePath);
+				return $this->reload($localFilePath);
 			}
 
 			//дополним пользовательский путь нужным слэшем, чтобы обоззначить его, как директорию
@@ -440,8 +438,9 @@ class FileModel implements IModel{
 			return true;
 
 	}
-	private function reload($hash, $timestamp,$filesize,$localFilePath){
-		if($this->hash != $hash && $this->time != $timestamp){
+	private function reload($localFilePath){
+			$filesize = filesize($localFilePath);
+			$timestamp = filectime($localFilePath);
 			$bu_servers = array();
 			//Сохраняем файл на первичный сервер
 			$server = new ServerModel;
@@ -492,7 +491,7 @@ class FileModel implements IModel{
 			$this->save_params();
 			return true;
 
-		}
+
 	}
 	private function save_file_path($userId,$userPath,$fileName){
 		$redis = new \Cache\Redis('81.17.140.102','6379');

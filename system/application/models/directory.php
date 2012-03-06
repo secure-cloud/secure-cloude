@@ -53,6 +53,7 @@ class DirectoryModel implements IModel{
 			if($separator == '\\' || $separator == '/'){
 				//$value = substr($value,0,strlen($value)-1); //Эта строчка на случай, если надо, чтоб директории приходили без слешей
 				$result[$value]='dir';
+
 			}
 			else{
 				$result[$value]='file';

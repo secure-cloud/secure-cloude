@@ -17,8 +17,8 @@ class FileController extends \Abstracts\Controller{
 											  $_FILES['file']['name'],
 											  $_FILES['file']['tmp_name'],
 											  $_FILES['file']['size'],
-												$this->post->hash,
-												$this->post->timestamp,
+												/*$this->post->hash,
+												$this->post->timestamp,*/
 											  2);
 			$this->view->json()->render('', array('status'=>'ok'));
 		} catch (Exception $e) {

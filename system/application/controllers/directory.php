@@ -32,12 +32,12 @@ class DirectoryController extends \Abstracts\Controller{
 			if (!isset($this->post->userid) ||
 				!is_numeric($this->post->userid))
 				throw new Exception('Incorrect user ID');
-			if (!isset($this->post->filepath))
+			if (!isset($this->post->dirpath))
 				throw new Exception("Please set file's Path");
 			if (!isset($this->post->direname))
 				throw new Exception("Please set name of directory");
 
-			$this->model->directory->dir_remove($this->post->userid, $this->post->filepath, $this->post->direname);
+			$this->model->directory->dir_remove($this->post->userid, $this->post->dirpath, $this->post->direname);
 			$this->view->json()->render('', array('status'=>'ok'));
 		} catch (Exception $e) {
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
