@@ -370,7 +370,7 @@ class FileModel implements IModel{
 			$timestamp = filectime($localFilePath);
 			$fileExist = $this->get_unic($userPath,$filename,$userId);
 			if($fileExist != NULL){
-				return $this->reload($localFilePath);
+				return $this->reload($localFilePath,$userId,$userPath,$filename);
 			}
 			$servers = \ServerModel::get_servers($bu_serverCount+1);
 			$bu_servers = array();
@@ -429,7 +429,7 @@ class FileModel implements IModel{
 			return true;
 
 	}
-	private function reload($localFilePath){
+	private function reload($localFilePath,$userId,$userPath,$filename){
 			$filesize = filesize($localFilePath);
 			$timestamp = filectime($localFilePath);
 			$bu_servers = array();
@@ -473,6 +473,9 @@ class FileModel implements IModel{
 						->save_params();
 				}
 			}
+
+			\DirectoryModel::save_path($userId,$userPath);
+			$this->save_file_path($userId,$userPath,$filename);
 			$this->fileData['name']= $this->name;
 			$this->fileData['path']= $this->path;
 			$this->fileData['bu_server']=join(',', $bu_servers);
@@ -489,6 +492,9 @@ class FileModel implements IModel{
 	private function save_file_path($userId,$userPath,$fileName){
 		$redis = new \Cache\Redis('81.17.140.102','6379');
 		$userPath = str_replace('\\','/', $userPath);
+		$separator = substr($userPath, 1);
+		if($separator != '/')
+				$userPath='/'.$userPath;
 		$redis->sadd($userId.'/'.md5($userPath), $fileName)->exec();
 	}
 	public function file_copy($userId,$userPath,$fileName,$newPath){

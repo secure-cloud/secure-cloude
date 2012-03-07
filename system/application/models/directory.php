@@ -67,21 +67,15 @@ class DirectoryModel implements IModel{
 	 * @param $userPath
 	 */
 	static public function save_path($userId, $userPath){
-		$isDir = false;
 		$redis = new \Cache\Redis('81.17.140.102','6379');
-		$separator = substr($userPath, -1);
-		if($separator == '\\' || $separator == '/'){
-			$isDir = true;
-		}
-		if(preg_match('|/|', $userPath) > 0){
-			$pathArray = explode('/',$userPath);
-		}
-		else{
-			$pathArray = explode('\\',$userPath);
-		}
+		$userPath = str_replace('\\','/',$userPath);
+		$separator = substr($userPath, 0, 1);
+		if($separator == '/')
+			$userPath=substr($userPath, 1);;
+		$pathArray = explode('/',$userPath);
 		array_unshift($pathArray,'');
+		$path = '';
 		foreach($pathArray as $key => $value){
-				$path = '';
 				$path .=$value.'/';
 				$next = $key+1;
 				if($next<count($pathArray)){
