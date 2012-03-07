@@ -209,6 +209,8 @@ class FileModel implements IModel{
 		if(!is_file($localPath.'/stream.tmp'))
 			throw new Exception('EOF',2000);
 		$file = fopen($localPath.'/stream.tmp','rb');
+//		$filesize = filesize($localPath.'/stream.tmp');
+//		$partsCount = $filesize/2095;
 		$postString = '';
 		$stopRead = false;
 		$EOF = false;
@@ -234,7 +236,7 @@ class FileModel implements IModel{
 		$status = fgets($file, 256);
 		if(!$status){
 			$EOF = true;
-			unlink($file);
+			unlink($localPath.'/stream.tmp');
 		}
 		return array('file'=>$postString,'EOF'=>$EOF);
 	}
