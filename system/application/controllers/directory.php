@@ -43,4 +43,5 @@ class DirectoryController extends \Abstracts\Controller{
 			$this->view->json()->render('', array('error'=>$e->getMessage()));
 		}
 	}
+
 }

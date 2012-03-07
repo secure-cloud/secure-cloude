@@ -403,6 +403,7 @@ class FileModel implements IModel{
 					throw new Exception("Can't login");
 			$serverFilePath = \DirectoryModel::make_server_path($userId,$userPath,$server);
 		//	ftp_mkdir($ftp, $serverFilePath);
+			\DirectoryModel::make_directory($ftp,$serverFilePath);
 			$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 			if(!$result){
 				throw new Exception('Internal error: Can not save file to server '.$server);
@@ -422,6 +423,7 @@ class FileModel implements IModel{
 				$isLogin = ftp_login($ftp,$server->username,$server->password);
 				if(!$isLogin)
 					throw new Exception("Can't login");
+				\DirectoryModel::make_directory($ftp,$serverFilePath);
 				$result = ftp_put($ftp, $serverFilePath.$filename, $localFilePath, FTP_BINARY);
 				if(!$result){
 					throw new Exception('Internal error: Can not save file to server '.$server);

@@ -99,6 +99,64 @@ class DirectoryModel implements IModel{
 		$redis->srem($userId.'/'.md5($userPath), $dirName)->exec();
 	}
 
+	public static function make_directory($ftp_stream, $dir){
+		if (!self::safe_mkdir($ftp_stream, $dir)) {
+			self::make_directory($ftp_stream, dirname($dir));
+			self::safe_mkdir($ftp_stream, $dir);
+		}
+		return true;
+
+		/*if (self::safe_is_dir($ftp_stream, $dir) || self::safe_mkdir($ftp_stream, $dir))
+			return true;
+		if (self::make_directory($ftp_stream, dirname($dir)))
+			return false;
+		return self::safe_mkdir($ftp_stream, $dir);
+		*/
+		/**try{
+			if (\DirectoryModel::ftp_is_dir($ftp_stream, $dir) || @ftp_mkdir($ftp_stream, $dir))
+				return true;
+		}
+		catch(Exception $e){}
+			if (\DirectoryModel::make_directory($ftp_stream, dirname($dir)))
+				return false;
+			return @ftp_mkdir($ftp_stream, $dir);
+		*/
+	}
+
+	public static  function safe_mkdir($ftp_stream, $dir) {
+		$result = false;
+		try {
+			$result = ftp_mkdir($ftp_stream, $dir);
+		} catch (Exception $e) {
+			return false;
+		}
+		return $result;
+	}
+
+	public static function safe_is_dir($ftp_stream, $dir) {
+		$original_directory = ftp_pwd($ftp_stream);
+		try {
+			ftp_chdir($ftp_stream, $dir);
+		} catch (Exception $e) {
+			return false;
+		}
+		return true;
+	}
+
+	private static function ftp_is_dir($ftp_stream, $dir){
+		$original_directory = ftp_pwd($ftp_stream);
+		try{
+			if(!@ftp_chdir($ftp_stream, $dir ))
+				throw new Exception("Directory doesn't exist");
+			else
+				@ftp_chdir( $ftp_stream, $original_directory );
+				return true;
+		}
+		catch(Exception $e){
+			return false;
+		}
+	}
+
 	function new_inst(){
 		return new self;
 	}
