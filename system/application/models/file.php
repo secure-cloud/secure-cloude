@@ -365,7 +365,7 @@ class FileModel implements IModel{
 				else
 					$userPath.='\\';
 			}
-			$separator = substr($userPath, 1);
+			$separator = substr($userPath,0 , 1);
 			if($separator != '/')
 			$userPath='/'.$userPath;
 
@@ -495,7 +495,7 @@ class FileModel implements IModel{
 	private function save_file_path($userId,$userPath,$fileName){
 		$redis = new \Cache\Redis('81.17.140.102','6379');
 		$userPath = str_replace('\\','/', $userPath);
-		$separator = substr($userPath, 1);
+		$separator = substr($userPath, 0, 1);
 		if($separator != '/')
 				$userPath='/'.$userPath;
 		$redis->sadd($userId.'/'.md5($userPath), $fileName)->exec();
