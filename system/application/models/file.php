@@ -33,9 +33,10 @@ class FileModel implements IModel{
 	}
 	public function get_unic($path, $name, $userId){
 		$this->fileData=array();
+		$path = str_replace('\\','/',$path);
 		$fileDB = new \DB\MySQL('files');
 			$file = $fileDB->select()
-				->where('path = ? AND name = ? ', $path, $name)
+				->where('path = ? AND name = ? AND ouner_id = ?', $path, $name, $userId)
 				->first();
 		if($file){
 			foreach($file as $rowName => $value){
@@ -110,6 +111,7 @@ class FileModel implements IModel{
 				}
 			}
 			return $currentFilesDB->update($update)
+				->where('id = ?', $this->id)
 				->exec();
 		}
 		else{
@@ -127,27 +129,6 @@ class FileModel implements IModel{
 	public function get_catalog($userId, $userPath){
 		//ToDo добавить в каталог
 
-	}
-	/*
-	 * Функция удаляет файл
-	 */
-	private function delete($userId, $userPath){
-		try{
-			$serverPath = \System\Config::instance()->filetransfer['serverpath'].DirectoryModel::make_server_path($userId,$userPath);
-			$this->get_by('fullname', $serverPath);
-			$servers[] = $this->fileData['server'];
-			$servers = array_merge($servers, array_shift(explode(',', $this->fileData['bu_server'])));
-			while(!empty($servers)){
-				$ftp = ftp_ssl_connect(array_shift($servers));
-				ftp_delete($ftp,$serverPath);
-			}
-			$fileDB = new \DB\MySQL('files');
-			$fileDB->delete()->where('id = ?', $this->fileData['id'])->exec();
-			return true;
-		}
-		catch (Exception $e){
-			return $e;
-		}
 	}
 
 	/**
@@ -375,12 +356,6 @@ class FileModel implements IModel{
 	 * @throws Exception
 	 */
 	public function save_file($userId, $userPath, $filename, $localFilePath, /*$filesize, $hash, $timeStamp,*/ $bu_serverCount = 2){
-			$filesize = filesize($localFilePath);
-			$timestamp = filectime($localFilePath);
-			$fileExist = $this->get_unic($userPath,$filename,$userId);
-			if($fileExist != NULL){
-				return $this->reload($localFilePath);
-			}
 
 			//дополним пользовательский путь нужным слэшем, чтобы обоззначить его, как директорию
 			$separator = substr($userPath, -1);
@@ -389,6 +364,13 @@ class FileModel implements IModel{
 					$userPath.='/';
 				else
 					$userPath.='\\';
+			}
+
+			$filesize = filesize($localFilePath);
+			$timestamp = filectime($localFilePath);
+			$fileExist = $this->get_unic($userPath,$filename,$userId);
+			if($fileExist != NULL){
+				return $this->reload($localFilePath);
 			}
 			$servers = \ServerModel::get_servers($bu_serverCount+1);
 			$bu_servers = array();

@@ -100,11 +100,16 @@ class DirectoryModel implements IModel{
 	}
 
 	public static function make_directory($ftp_stream, $dir){
-		if (!self::safe_mkdir($ftp_stream, $dir)) {
-			self::make_directory($ftp_stream, dirname($dir));
-			self::safe_mkdir($ftp_stream, $dir);
+		if(!self::safe_is_dir($ftp_stream, $dir)){
+			if (!self::safe_mkdir($ftp_stream, $dir)) {
+				self::make_directory($ftp_stream, dirname($dir));
+				self::safe_mkdir($ftp_stream, $dir);
+			}
+			return true;
 		}
-		return true;
+		else{
+			return true;
+		}
 
 		/*if (self::safe_is_dir($ftp_stream, $dir) || self::safe_mkdir($ftp_stream, $dir))
 			return true;
@@ -134,7 +139,6 @@ class DirectoryModel implements IModel{
 	}
 
 	public static function safe_is_dir($ftp_stream, $dir) {
-		$original_directory = ftp_pwd($ftp_stream);
 		try {
 			ftp_chdir($ftp_stream, $dir);
 		} catch (Exception $e) {
