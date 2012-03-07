@@ -365,9 +365,12 @@ class FileModel implements IModel{
 				else
 					$userPath.='\\';
 			}
+			$separator = substr($userPath, 1);
+			if($separator != '/')
+			$userPath='/'.$userPath;
 
 			$filesize = filesize($localFilePath);
-			$timestamp = filectime($localFilePath);
+			$timestamp = date('Y-m-d H:i:s',filectime($localFilePath));
 			$fileExist = $this->get_unic($userPath,$filename,$userId);
 			if($fileExist != NULL){
 				return $this->reload($localFilePath,$userId,$userPath,$filename);
@@ -431,7 +434,7 @@ class FileModel implements IModel{
 	}
 	private function reload($localFilePath,$userId,$userPath,$filename){
 			$filesize = filesize($localFilePath);
-			$timestamp = filectime($localFilePath);
+			$timestamp = date('Y-m-d H:i:s',filectime($localFilePath));
 			$bu_servers = array();
 			//Сохраняем файл на первичный сервер
 			$server = new ServerModel;
