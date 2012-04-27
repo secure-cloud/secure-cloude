@@ -139,7 +139,8 @@ class UserController extends \Abstracts\Controller{
 
 	public function _pre_action() {
 		try {
-//			if (!isset($this->post->check_sum)) //ToDo РАскомментировать. Установлено только на время тестирования системы
+//			if (!isset($this->post->check_sum))
+//ToDo РАскомментировать. Установлено только на время тестирования системы
 //				throw new Exception('Checksum is missing');
 //			$checkresult = $this->helper->api->check_sum(
 //				(array)$this->post
@@ -154,12 +155,16 @@ class UserController extends \Abstracts\Controller{
 	}
 
 	private function fields() {
-		if (!isset($this->post->id) ||
-			!is_numeric($this->post->id))
-			throw new Exception('User id is missing or incorrect');
 		if (!isset($this->post->fields))
 			throw new Exception('User fields are not specified');
-		$user = $this->model->user->get_user_by('id', $this->post->id);
+
+		if (isset($this->post->id) && is_numeric($this->post->id))
+			$user = $this->model->user->get_user_by('id', $this->post->id);
+    	elseif (isset($this->post->mail) && $this->helper->validator->email($this->post->mail))
+			$user = $this->model->user->get_user_by('mail', $this->post->mail);
+		else
+			throw new Exception('User id or mail is missing or incorrect');
+
 		if ($user === NULL)
 			throw new Exception('User not found. Sadness.');
 		$fields = json_decode($this->post->fields, true);
